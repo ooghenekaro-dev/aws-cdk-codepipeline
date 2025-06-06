@@ -9,9 +9,9 @@ export class LambdaStack extends cdk.Stack {
     super(scope, id, props);
 
     new Function(this, 'LambdaFunction', {
-      runtime: Runtime.NODEJS_22_X,
-      code: Code.fromAsset(path.join(__dirname, '..', 'lambda')),
-      handler: 'index.handler',
+      runtime: Runtime.NODEJS_18_X,
+      code: Code.fromAsset(path.join(__dirname, 'lambda')),
+      handler: 'handler.handler',
       environment: {
         StageName: StageName
       }
