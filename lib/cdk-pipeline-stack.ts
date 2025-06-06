@@ -9,8 +9,14 @@ export class CdkPipelineStack extends cdk.Stack {
 
     new CodePipeline(this, 'Pipeline', {
       synth: new ShellStep('Synth', {
-        input: CodePipelineSource.gitHub('aws-samples/aws-cdk-pipelines', 'main'),
-        commands: ['npm ci', 'npm run build', 'npx cdk synth']
+        input: CodePipelineSource.connection('ooghenekaro-dev/aws-cdk-codepipeline', 'main', {
+          connectionArn: 'arn:aws:codeconnections:eu-west-2:233535120968:connection/a87a8ab2-a00d-43ba-bdd9-b7978f3db375' // Created using the AWS console
+        }),
+        commands: [
+          'npm ci',
+          'npm run build',
+          'npx cdk synth'
+        ]
       })
     });
 
@@ -18,5 +24,6 @@ export class CdkPipelineStack extends cdk.Stack {
     // const queue = new sqs.Queue(this, 'CdkPipelineQueue', {
     //   visibilityTimeout: cdk.Duration.seconds(300)
     // });
-  }
-}
+
+
+  }}
