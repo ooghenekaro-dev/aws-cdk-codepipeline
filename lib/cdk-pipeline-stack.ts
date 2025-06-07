@@ -66,54 +66,46 @@ export class CdkPipelineStack extends cdk.Stack {
 
 */
 
+
 import * as cdk from 'aws-cdk-lib';
-import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import { Construct } from 'constructs';
-import { CodePipeline, CodePipelineSource, CodeBuildStep, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
+import { CodePipeline, CodePipelineSource, ShellStep, ManualApprovalStep } from 'aws-cdk-lib/pipelines';
 import { CdkPipelineStage } from './stage';
 
 export class CdkPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const synthStep = new CodeBuildStep('Synth', {
-      input: CodePipelineSource.connection('ooghenekaro-dev/aws-cdk-codepipeline', 'main', {
-        connectionArn: 'arn:aws:codeconnections:eu-west-2:233535120968:connection/a87a8ab2-a00d-43ba-bdd9-b7978f3db375'
-      }),
-      installCommands: ['npm ci'],
-      commands: ['npm run build', 'npx cdk synth'],
-      buildEnvironment: {
-        buildImage: codebuild.LinuxBuildImage.STANDARD_7_0
-      },
-      partialBuildSpec: codebuild.BuildSpec.fromObject({
-        version: '0.2',
-        reports: {
-          GuguruReportGroup: {
-            files: '**/*',
-            'base-directory': 'test-reports', 
-            'file-format': 'JUNITXML'
-          }
-        }
-      }),
-      projectName: 'GuguruSynthProject' 
-    });
-
     const pipeline = new CodePipeline(this, 'Pipeline', {
       pipelineName: 'GuguruPipeline',
-      synth: synthStep
+      synth: new ShellStep('Synth', {
+        input: CodePipelineSource.connection('ooghenekaro-dev/aws-cdk-codepipeline', 'main', {
+          connectionArn: 'arn:aws:codeconnections:eu-west-2:233535120968:connection/a87a8ab2-a00d-43ba-bdd9-b7978f3db375',
+        }),
+        commands: ['npm ci', 'npm run build', 'npx cdk synth'],
+      }),
     });
 
-    const dev = pipeline.addStage(new CdkPipelineStage(this, 'dev', 'dev'));
-    const prod = pipeline.addStage(new CdkPipelineStage(this, 'prod', 'prod'));
+    // Dev stage
+    const devStage = pipeline.addStage(new CdkPipelineStage(this, 'dev', 'dev'));
+
+    // Prod stage with manual approval and CodeBuild report link
+    const prodStage = pipeline.addStage(new CdkPipelineStage(this, 'prod', 'prod'));
 
     const region = cdk.Stack.of(this).region;
-    const reportGroupUrl = `https://${region}.console.aws.amazon.com/codesuite/codebuild/projects/GuguruSynthProject/report-groups/GuguruReportGroup/reports?region=${region}`;
+    const accountId = cdk.Stack.of(this).account;
+    const codebuildProjectName = 'GuguruPipelineBuildSynth'; // auto-generated CodeBuild project name
 
-    prod.addPre(new ManualApprovalStep('PromoteToProd', {
+    const reportGroupName = `${codebuildProjectName}-ReportGroup`;
+    const reportGroupUrl = `https://${region}.console.aws.amazon.com/codesuite/codebuild/${accountId}/projects/${codebuildProjectName}/report-groups/${reportGroupName}/reports?region=${region}`;
+
+    prodStage.addPre(new ManualApprovalStep('PromoteToProd', {
       comment: [
         '🔍 Review the test results before promoting to production.',
-        `🧪 CodeBuild Report: ${reportGroupUrl}`
-      ].join('\n')
+        `🧪 [View CodeBuild Report](${reportGroupUrl})`
+      ].join('\n'),
     }));
   }
 }
+
+
