@@ -7,5 +7,5 @@ export class CdkPipelineStage extends Stage {  constructor(scope: Construct, id:
     super(scope, id, props);
 
     new LambdaStack(this, 'LambdaStack', StageName);
-    new storageStack(this, 'StorageStack');
+    new storageStack(this, 'StorageStack', StageName);
   }}
